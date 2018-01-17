@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<test type="parameters"> 
+  <list>
+    <info> 
+      <version>1.0</version>   
+      <date>2018-01-10</date> 
+    </info>
+    <number>001 002 003 004 005 006 007 008</number>
+    <timeout>300</timeout>  <!---基站配置参数重启后检查基站状态超时时间-->
+    <controlpc1>192.168.254.174</controlpc1>
+    <controlpc2>127.0.0.1</controlpc2>
+    <enodeb>
+      <enb id="001">
+        <enbip>192.168.254.24</enbip>
+        <earfcn>44450</earfcn>
+        <pci>84</pci>
+        <mme>20.0.20.121</mme>
+        <plmn>46097</plmn>
+        <segw>192.168.254.141</segw>
+        <psk>123456</psk>
+      </enb>
+      <enb id="002">
+        <enbip>192.168.254.26</enbip>
+        <earfcn>44450</earfcn>
+        <pci>86</pci>
+        <mme>20.0.20.121</mme>
+        <plmn>46097</plmn>
+        <segw>192.168.254.141</segw>
+        <psk>123456</psk>
+      </enb>
+      <enb id="003">
+        <enbip>192.168.254.24</enbip>
+        <earfcn>44450</earfcn>
+        <pci>84</pci>
+        <mme>10.0.10.4</mme>
+        <plmn>46068</plmn>
+        <segw>42.159.122.45</segw>
+        <psk>baicells.azure.cn</psk>
+      </enb>
+      <enb id="004">
+        <enbip>192.168.254.24</enbip>
+        <earfcn>44450</earfcn>
+        <pci>84</pci>
+        <mme>10.0.10.4</mme>
+        <plmn>46068</plmn>
+        <segw>42.159.122.45</segw>
+        <psk>baicells.azure.cn</psk>
+      </enb>
+      <enb id="005">
+        <enbip>192.168.254.24</enbip>
+        <earfcn>44450</earfcn>
+        <pci>84</pci>
+        <mme>10.0.10.4</mme>
+        <plmn>46068</plmn>
+        <segw>42.159.122.45</segw>
+        <psk>baicells.azure.cn</psk>
+      </enb>
+      <enb id="006">
+        <enbip>192.168.254.24</enbip>
+        <earfcn>44450</earfcn>
+        <pci>84</pci>
+        <mme>10.0.10.4</mme>
+        <plmn>46068</plmn>
+        <segw>42.159.122.45</segw>
+        <psk>baicells.azure.cn</psk>
+      </enb>
+      <enb id="007">
+        <enbip>192.168.254.24</enbip>
+        <earfcn>44450</earfcn>
+        <pci>84</pci>
+        <mme>10.0.10.4</mme>
+        <plmn>46068</plmn>
+        <segw>42.159.122.45</segw>
+        <psk>baicells.azure.cn</psk>
+      </enb>
+      <enb id="008">
+        <enbip>192.168.254.24</enbip>
+        <earfcn>44450</earfcn>
+        <pci>84</pci>
+        <mme>10.0.10.4</mme>
+        <plmn>46068</plmn>
+        <segw>42.159.122.45</segw>
+        <psk>baicells.azure.cn</psk>
+      </enb>
+    </enodeb>
+    <ftpargs>
+        <serviceTime>15</serviceTime>
+        <ftpUser>ftpuser</ftpUser>
+        <ftpPasswd>test888</ftpPasswd>
+        <dlThreadCount>5</dlThreadCount>
+        <dwpath>/home/ftpuser/</dwpath>
+        <localdwpath>D:/Autotest/Ftpdat/</localdwpath>
+        <dlFilename>1file</dlFilename>
+        <ulThreadCount>5</ulThreadCount>
+        <uppath>/home/ftpuser/</uppath>
+        <localuppath>D:/Autotest/Ftpdat/</localuppath>
+        <ulFilename>1file</ulFilename>
+    </ftpargs>
+    <ues>
+        <ue id="001">
+            <controlpc>1</controlpc>
+            <cpeip>109.10.10.24</cpeip>
+            <model>ODU</model>
+            <serverip>192.168.254.220</serverip>
+        </ue>
+        <ue id="002">
+            <controlpc>2</controlpc>
+            <cpeip>109.10.10.25</cpeip>
+            <model>ODU</model>
+            <serverip>192.168.254.220</serverip>
+        </ue>
+        <ue id="003">
+            <controlpc>1</controlpc>
+            <cpeip>109.10.10.24</cpeip>
+            <model>ODU</model>
+            <serverip>124.1.1.37</serverip>
+        </ue>
+        <ue id="004">
+            <controlpc>1</controlpc>
+            <cpeip>109.10.10.24</cpeip>
+            <model>ODU</model>
+            <serverip>124.1.1.37</serverip>
+        </ue>
+        <ue id="005">
+            <controlpc>2</controlpc>
+            <cpeip>109.10.10.24</cpeip>
+            <model>ODU</model>
+            <serverip>124.1.1.37</serverip>
+        </ue>
+        <ue id="006">
+            <controlpc>1</controlpc>
+            <cpeip>109.10.10.24</cpeip>
+            <model>ODU</model>
+            <serverip>124.1.1.37</serverip>
+        </ue>
+        <ue id="007">
+            <controlpc>2</controlpc>
+            <cpeip>109.10.10.24</cpeip>
+            <model>ODU</model>
+            <serverip>124.1.1.37</serverip>
+        </ue>
+        <ue id="008">
+            <controlpc>2</controlpc>
+            <cpeip>109.10.10.24</cpeip>
+            <model>ODU</model>
+            <serverip>124.1.1.37</serverip>
+        </ue>
+    </ues>
+  </list> 
+</test>
