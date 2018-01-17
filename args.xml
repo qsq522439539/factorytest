@@ -30,7 +30,7 @@
         <psk>123456</psk>
       </enb>
       <enb id="003">
-        <enbip>192.168.254.24</enbip>
+        <enbip>192.168.254.27</enbip>
         <earfcn>44450</earfcn>
         <pci>84</pci>
         <mme>10.0.10.4</mme>
@@ -39,7 +39,7 @@
         <psk>baicells.azure.cn</psk>
       </enb>
       <enb id="004">
-        <enbip>192.168.254.24</enbip>
+        <enbip>192.168.254.28</enbip>
         <earfcn>44450</earfcn>
         <pci>84</pci>
         <mme>10.0.10.4</mme>
@@ -48,7 +48,7 @@
         <psk>baicells.azure.cn</psk>
       </enb>
       <enb id="005">
-        <enbip>192.168.254.24</enbip>
+        <enbip>192.168.254.29</enbip>
         <earfcn>44450</earfcn>
         <pci>84</pci>
         <mme>10.0.10.4</mme>
@@ -57,7 +57,7 @@
         <psk>baicells.azure.cn</psk>
       </enb>
       <enb id="006">
-        <enbip>192.168.254.24</enbip>
+        <enbip>192.168.254.30</enbip>
         <earfcn>44450</earfcn>
         <pci>84</pci>
         <mme>10.0.10.4</mme>
@@ -66,7 +66,7 @@
         <psk>baicells.azure.cn</psk>
       </enb>
       <enb id="007">
-        <enbip>192.168.254.24</enbip>
+        <enbip>192.168.254.31</enbip>
         <earfcn>44450</earfcn>
         <pci>84</pci>
         <mme>10.0.10.4</mme>
@@ -75,7 +75,7 @@
         <psk>baicells.azure.cn</psk>
       </enb>
       <enb id="008">
-        <enbip>192.168.254.24</enbip>
+        <enbip>192.168.254.32</enbip>
         <earfcn>44450</earfcn>
         <pci>84</pci>
         <mme>10.0.10.4</mme>
