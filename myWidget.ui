@@ -1476,9 +1476,9 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>145</x>
+     <x>205</x>
      <y>410</y>
-     <width>291</width>
+     <width>241</width>
      <height>30</height>
     </rect>
    </property>
@@ -1549,6 +1549,31 @@
      <width>12</width>
      <height>16</height>
     </size>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton7">
+   <property name="geometry">
+    <rect>
+     <x>145</x>
+     <y>410</y>
+     <width>61</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="cursor">
+    <cursorShape>OpenHandCursor</cursorShape>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::StrongFocus</enum>
+   </property>
+   <property name="text">
+    <string>出厂设置</string>
    </property>
   </widget>
  </widget>

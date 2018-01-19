@@ -12,14 +12,16 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import _cffi_backend
+import mul_process_package
 from enbpc_client import SockThread
 
 q = Queue()
 
 xmlname = 'args.xml'
-pingErrorMsg = u'部分基站ping不通或ssh不通，请检查测试环境...'
+pingErrorMsg = u'部分基站ping或ssh不通请检查测试环境...'
 confiErrorMsg = u'部分基站参数配置出现错误...'
 initialEdit = u"未配置参数"
+recoveryErrorMsg = u'部分基站恢复出厂设置出现错误...'
 
 try:
 	_fromUtf8 = QtCore.QString.fromUtf8
@@ -41,11 +43,11 @@ class openWnd(QtGui.QWidget, myWidget.Ui_widget):
 		self.setupUi(self)
 		self.IpEdit()
 		self.initialStatusEdit()
-		self.initialdlSpeedEdit()
-		self.initialulSpeedEdit()
+		self.initialdlSpeedEdit('null')
+		self.initialulSpeedEdit('null')
 		self.createButton()
 		palette1 = QtGui.QPalette()
-		palette1.setColor(self.backgroundRole(), QtGui.QColor("#454545"))
+		palette1.setColor(self.backgroundRole(), QtGui.QColor("#BFEFFF"))
 		self.setPalette(palette1)
 		self.setAutoFillBackground(True)
 		
@@ -213,21 +215,28 @@ class openWnd(QtGui.QWidget, myWidget.Ui_widget):
 			self.label.setText(_fromUtf8(pingErrorMsg))
 		if text[1] == 'have some errors':
 			self.label.setText(_fromUtf8(confiErrorMsg))
-
+		if text[1] == 'Recovery Fail':
+			self.label.setText(_fromUtf8(recoveryErrorMsg))
+	
+	def clearEdit(self):
+		confi = self.getparam()
+		for enbip in confi.keys():
+			self.setText([enbip, ''])
+			
 	def initialStatusEdit(self):
 		confi = self.getparam()
 		for enbip in confi.keys():
 			self.setText([enbip, initialEdit])
 	
-	def initialdlSpeedEdit(self):
+	def initialdlSpeedEdit(self, msg):
 		confi = self.getparam()
 		for enbip in confi.keys():
-			self.setdlspeedtext([enbip, 'null'])
+			self.setdlspeedtext([enbip, msg])
 			
-	def initialulSpeedEdit(self):
+	def initialulSpeedEdit(self, msg):
 		confi = self.getparam()
 		for enbip in confi.keys():
-			self.setulspeedtext([enbip, 'null'])
+			self.setulspeedtext([enbip, msg])
 			
 	def createButton(self):
 		self.connect(self.pushButton1, QtCore.SIGNAL('clicked()'), self.startRunConfi)
@@ -236,6 +245,7 @@ class openWnd(QtGui.QWidget, myWidget.Ui_widget):
 		self.connect(self.pushButton2, QtCore.SIGNAL('clicked()'), self.startDotest)
 		self.connect(self.pushButton5, QtCore.SIGNAL('clicked()'), self.startDodlultest)
 		self.connect(self.pushButton6, QtCore.SIGNAL('clicked()'), self.startBothtest)
+		self.connect(self.pushButton7, QtCore.SIGNAL('clicked()'), self.startRecovery)
 		
 	def getcpeid(self):
 		ue = []
@@ -265,7 +275,17 @@ class openWnd(QtGui.QWidget, myWidget.Ui_widget):
 			ue.append(ueid)
 		return ue
 	
+	def startRecovery(self):
+		self.label.setText(_fromUtf8(''))
+		self.thread = MyRecoveryThread()
+		self.thread.getConfi(self.getparam())
+		self.thread.sinOut.connect(self.setText)
+		self.thread.sinOut.connect(self.setLabelText)
+		self.thread.start()
+		
 	def startAccessible(self):
+		self.label.setText(_fromUtf8(''))
+		self.clearEdit()
 		self.thread = MyAccessThread()
 		self.thread.getConfi(self.getparam())
 		self.thread.sinOut.connect(self.setText)
@@ -273,6 +293,7 @@ class openWnd(QtGui.QWidget, myWidget.Ui_widget):
 		self.thread.start()
 		
 	def startRunConfi(self):
+		self.label.setText(_fromUtf8(''))
 		self.thread = MyConfiThread()
 		self.thread.getConfi(self.getparam())
 		self.thread.sinOut.connect(self.setText)
@@ -287,6 +308,8 @@ class openWnd(QtGui.QWidget, myWidget.Ui_widget):
 		self.thread.start()
 	
 	def startDotest(self):
+		self.initialdlSpeedEdit(u'测试中...')
+		self.initialulSpeedEdit('null')
 		self.thread = MyDodltestThread()
 		self.thread.getSendingmsg(self.getcpeid())
 		self.thread.getsocketip()
@@ -295,6 +318,8 @@ class openWnd(QtGui.QWidget, myWidget.Ui_widget):
 		self.thread.start()
 	
 	def startDodlultest(self):
+		self.initialdlSpeedEdit(u'测试中...')
+		self.initialulSpeedEdit(u'测试中...')
 		self.thread = MyDodlultestThread()
 		self.thread.getSendingmsg(self.getcpeid())
 		self.thread.getsocketip()
@@ -303,13 +328,40 @@ class openWnd(QtGui.QWidget, myWidget.Ui_widget):
 		self.thread.start()
 		
 	def startBothtest(self):
+		self.initialdlSpeedEdit(u'测试中...')
+		self.initialulSpeedEdit(u'测试中...')
 		self.thread = MyBothtestThread()
 		self.thread.getSendingmsg(self.getcpeid())
 		self.thread.getsocketip()
 		self.thread.sinOut.connect(self.setdlspeedtext)
 		self.thread.sinOut2.connect(self.setulspeedtext)
 		self.thread.start()
-		
+
+class MyRecoveryThread(QThread):
+	sinOut = pyqtSignal(list)
+	
+	def __init__(self, parent=None):
+		super(MyRecoveryThread, self).__init__(parent)
+	
+	def getConfi(self, confi):
+		self.confi = confi
+	
+	def run(self):
+		proc_record = []
+		for k in self.confi.keys():
+			self.sinOut.emit([k,'Start Recovery..'])
+		for k in self.confi.keys():
+			p = Process(target=FactoryTest().doRecovery, args=(k, q))
+			p.start()
+			proc_record.append(p)
+		for p in proc_record:
+			p.join()
+		for k in self.confi.keys():
+			result = q.get()
+			ip = re.search(r'(\d+)\.(\d+)\.(\d+)\.(\d+)', result).group(0)
+			msg = result.split(ip)[1]
+			self.sinOut.emit([ip, msg])
+	
 class MyAccessThread(QThread):
 	sinOut = pyqtSignal(list)
 
@@ -341,7 +393,7 @@ class MyConfiThread(QThread):
 	def run(self):
 		proc_record = []
 		for k in self.confi.keys():
-			self.sinOut.emit([k,'Start to configuration...'])
+			self.sinOut.emit([k,'Start configuration param..'])
 		for k in self.confi.keys():
 			p = Process(target=FactoryTest().doTest, args=(k, self.confi[k][0], self.confi[k][1], self.confi[k][2],
 			                                             self.confi[k][3], self.confi[k][4], self.confi[k][5], q))
@@ -444,7 +496,6 @@ class MyDodltestThread(QThread):
 				return enbdata[k]['enbip']
 			
 	def run(self):
-		print self.sendlist
 		socktask1 = SockThread('connectionToCPEPC', self.socketip[0])
 		socktask1.setDaemon(True)
 		socktask1.start()
@@ -473,7 +524,7 @@ class MyDodltestThread(QThread):
 			if command[-1] == self.socketip[1]:
 				SockThread('connectionToCPEPC2').dosendcmd(command[:-1], socktask2)
 				time.sleep(3)
-				result = SockThread('connectionToCPEPC1').getresult(socktask2)
+				result = SockThread('connectionToCPEPC2').getresult(socktask2)
 				print 'result2:', result
 				cpeip = result[0]
 				enbip = self.cpeipToEnbip(cpeip)
@@ -522,7 +573,6 @@ class MyDodlultestThread(QThread):
 				return enbdata[k]['enbip']
 	
 	def run(self):
-		print self.sendlist
 		socktask1 = SockThread('connectionToCPEPC', self.socketip[0])
 		socktask1.setDaemon(True)
 		socktask1.start()

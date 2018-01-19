@@ -122,7 +122,7 @@ class SockThread(threading.Thread):
 		return output
 		
 if __name__ == "__main__":
-	socktask = SockThread('connectionToCPEPC','127.0.0.1')
+	socktask = SockThread('connectionToCPEPC','192.168.254.174')
 	socktask.setDaemon(True)
 	socktask.start()
 	while(socktask.isworking==0):

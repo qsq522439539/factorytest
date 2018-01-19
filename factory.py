@@ -13,7 +13,31 @@ class FactoryTest:
 	session = None
 	isrecovery = False
 	ischeckgps = False
-
+	
+	def doRecovery(self, enbip, q):
+		result = self.operation_recovery(enbip)
+		if result:
+			q.put('%sRecovery Success'%enbip)
+		else:
+			q.put('%sRecovery Fail'%enbip)
+			
+	def operation_recovery(self, enbip):
+		if not self.recoverdata(enbip):
+			self.usage('eNB %s recovery fails.'%enbip, 6)
+			return False
+		print self.timeinfo(),'eNB %s data recovery done, rebooting now, wait for ~3 minutes.'%enbip
+		if not self.accessible(enbip, 600): #10 minutes
+			self.usage('After recovery and reboot, eNB %s is not accessible.'%enbip, 7)
+			return False
+		print self.timeinfo(),'After reboot, eNB %s is accessible(Ping & SSH)'%enbip
+		print self.timeinfo(),'Please wait for recover check...'
+		time.sleep(120)
+		if not self.recovercheck(enbip):
+			self.usage('eNB %s recovery data check failure.'%enbip, 8)
+			return False
+		print self.timeinfo(),'The eNB %s Recovery Success.'%enbip
+		return True
+		
 	def doTest(self, enbip, earfcn, pci, mme, plmn, segw, psk, q):
 		result = self.main(enbip, earfcn, pci, mme, plmn, segw, psk)
 		if result:
@@ -60,21 +84,6 @@ class FactoryTest:
 			self.usage('eNB %s is not accessible.'%enbip, 2)
 			return False
 		print self.timeinfo(),'eNB %s is accessible(Ping & SSH)'%enbip
-		# if self.isrecovery:
-		# 	if not self.recoverdata(enbip):
-		# 		self.usage('eNB %s recovery fails.'%enbip, 6)
-		# 	print self.timeinfo(),'eNB %s data recovery done, rebooting now, wait for ~5 minutes.'%enbip
-		# 	if not self.accessible(enbip, 600): #10 minutes
-		# 		self.usage('After recovery and reboot, eNB %s is not accessible.'%enbip, 7)
-		# 	print self.timeinfo(),'After reboot, eNB %s is accessible(Ping & SSH)'%enbip
-		# 	time.sleep(120)
-		# 	if not self.recovercheck(enbip):
-		# 		self.usage('eNB %s recovery data check failure.'%enbip, 8)
-		# 	print self.timeinfo(),'The eNB %s Recovery Success.'%enbip
-		# else:
-		#Parameter configuration#
-		# if not earfcn or not pci:
-		# 	self.usage('EARFCN or PCI is not configured')
 		if not self.configuredata(enbip, earfcn, pci, mme, plmn, segw, psk):
 			self.usage('eNB %s configuration fails.'%enbip, 3)
 			return False
@@ -266,18 +275,13 @@ class FactoryTest:
 ######################Configure Operation#################################
 
 ######################Recovery Operation#################################
-	def recoverdata(self,enbip):
+	def recoverdata(self, enbip):
 		'''回复基站出厂设置，成功的话重启基站'''
 		'''mibcli factoryreset --> ???'''
 		if not self.sshsession(enbip):
 			return False
-		#GPS Switch
-		if not self.send_cmdNcheck('cli -c "oam.set GPS_CONTROL_SWITCH 1"','OK'):
-			return False
-		if not self.send_cmdNcheck('cli -c "oam.set LTE_GPS_SYNC_ENABLE 1"','OK'):
-			return False
 		#Modify PCI
-		if not self.send_cmdNcheck('cli -c "oam.set LTE_PHY_CELLID_LIST 36"','OK'):
+		if not self.send_cmdNcheck('cli -c "oam.set LTE_PHY_CELLID_LIST 52"','OK'):
 			return False
 		'''#EARFCN??'''
 		if not self.send_cmdNcheck('cli -c "oam.set LTE_DL_EARFCN 44190"','OK'):
@@ -285,10 +289,15 @@ class FactoryTest:
 		if not self.send_cmdNcheck('cli -c "oam.set LTE_UL_EARFCN 44190"','OK'):
 			return False
 		#Configure MME IP
-		if not self.send_cmdNcheck('cli -c \'oam.set LTE_SIGLINK_SERVER_LIST "10.0.3.4"\'','OK'):
+		if not self.send_cmdNcheck('cli -c \'oam.set LTE_SIGLINK_SERVER_LIST "10.3.0.4"\'','OK'):
 			return False
 		#Cloud EPC
 		if not self.send_cmdNcheck('cli -c "oam.set TOGGLE_SWITCH 1"','OK'):
+			return False
+		time.sleep(10)
+		if not self.send_cmdNcheck('cli -c "oam.set TOGGLE_SWITCH 0"','OK'):
+			return False
+		if not self.send_cmdNcheck('cli -c "oam.set LTE_X_BAICELLS_MME_POOL_ENABLE 0"','OK'):
 			return False
 		#Reboot
 		output = self.send_cmd('(sleep 5;reboot) &')
@@ -309,6 +318,18 @@ class FactoryTest:
 		if not self.send_cmdNcheck('mibcli get IPSEC.0.TUNNEL_GATEWAY','baicells-'):
 			return False
 		if not self.send_cmdNcheck('mibcli get IPSEC.1.TUNNEL_GATEWAY','baicells-'):
+			return False
+		if not self.send_cmdNcheck('cli -c "oam.getwild LTE_X_BAICELLS_MME_POOL_ENABLE"','0'):
+			return False
+		if not self.send_cmdNcheck('cli -c "oam.getwild TOGGLE_SWITCH"','0'):
+			return False
+		if not self.send_cmdNcheck('cli -c "oam.getwild LTE_UL_EARFCN"','44190'):
+			return False
+		if not self.send_cmdNcheck('cli -c "oam.getwild LTE_DL_EARFCN"','44190'):
+			return False
+		if not self.send_cmdNcheck('cli -c "oam.getwild LTE_SIGLINK_SERVER_LIST"','10.3.0.4'):
+			return False
+		if not self.send_cmdNcheck('cli -c "oam.getwild LTE_PHY_CELLID_LIST"','52'):
 			return False
 		self.client.close()
 		return True

@@ -1,28 +1,21 @@
 #!/usr/bin/env python
 #coding=utf-8
 from ctypes import *
+from socket import *
 import paramiko
-import os
 import subprocess
-import string
-import time
-import datetime
-import math
 import multiprocessing
 import threading
-#import Queue
-import pickle
+import time
 import json
 import sys
 import re
-import getopt
-from socket import *
+import os
 import struct 
+import _cffi_backend
+import mul_process_package
 
-import select  
-import Queue  
-import binascii 
-import random
+hoolog = "D:/Autotest/Logs/hoonetmeter.txt"
 
 class CpePCMain:
 	port = None
@@ -39,7 +32,9 @@ class CpePCMain:
 		print "Server is starting"
 		serversock = socket(AF_INET, SOCK_STREAM)
 		serversock.bind(('', self.port))
-		serversock.listen(8)
+		serversock.listen(1)
+		quitThread = threading.Thread(target = self._quitapp, args = ('quit',)) 
+		quitThread.start()
 		while True: 
 			conn, address = serversock.accept()
 			try:
@@ -55,17 +50,26 @@ class CpePCMain:
 						print " ", conn.getpeername() , 'queue empty'  
 						break
 					else:  
-						if (next_msg[0]=='quit'):
-							break
 						data = json.dumps(next_msg)
 						header = struct.pack("i",int(len(data)+4))
 						print "Feedback>>> " , next_msg
 						conn.send(header+data) 
+						if (next_msg[0]=='quit'):
+							break
 			except Exception,e:
 				print e,'Time out'
 				break
 			conn.close()
 		serversock.close()
+
+	def _quitapp(self, test): 
+		while True:
+			data = raw_input('> ')
+			if data == 'quit':
+				self.mqueue.put(['quit'])
+				os.system("taskkill /f /im HooNetMeter.exe" + " 1>NUL 2>&1") 
+				time.sleep(2)
+				os._exit(0)
 
 	def _recvSock(self, sock, test): 
 		dataBuffer = bytes()
@@ -76,25 +80,25 @@ class CpePCMain:
 					dataBuffer += data
 					while True:
 						if len(dataBuffer)<4:
-							break
+							break;
 						length = struct.unpack("i",dataBuffer[0:4])
 						if len(dataBuffer)<length[0]:
-							break
+							break;
 						body=dataBuffer[4:length[0]]
 						if not self.parseCmd(body):
 							print "Normally close socket."  
 							self.mqueue.put(['quit'])
 							time.sleep(3)
 							sock.close()
-							return
+							return;
 						dataBuffer=dataBuffer[length[0]:]
 				else: 
 					print "No data received, closing socket."  
 					sock.close()
 					break
 			except Exception,e:
-				print e
-				print "Socket receiving Error.."
+				#print e
+				print "Socket Disconnected."
 				sock.close()
 				break
 
@@ -119,7 +123,7 @@ class CpePCMain:
 	def processCmd(self, command, queue):
 		try:
 			result = CpeControl().main(command)
-			# result = [True, [[62.81, 63.3, 62.32], [1.31, 1.31, 1.31]]]
+			#print 'result to be return:',result
 			queue.put([command[0],command[1],result])
 		except Exception,e:
 			print 'processCmd:',e
@@ -127,10 +131,10 @@ class CpePCMain:
 
 	def startHooMeter(self,prc_name='HooNetMeter'):
 		try:
-			os.system("taskkill /f /im 1>null 2>&1" + prc_name+".exe")
+			os.system("taskkill /f /im " + prc_name+".exe" + " 1>NUL 2>&1") 
 			time.sleep(2)
-			if os.path.exists("D:/Autotest/Logs/hoonetmeter.txt"):
-				os.remove("D:/Autotest/Logs/hoonetmeter.txt")
+			if os.path.exists(hoolog):
+				os.remove(hoolog)
 			for i in range(5):
 				if self.checkHooMeter(prc_name):
 					return True
@@ -175,10 +179,8 @@ class CpePCMain:
 					return True
 		return False
 
-
 class CpeControl:
 	client  = None
-	session = None
 
 	def main(self, command):
 		try:
@@ -289,31 +291,26 @@ class CpeControl:
 	#Service Operation#
 	def operataion_service(self, cpeip, svctype, params):
 		cpeipinfo = cpeip.split('.')
+		#self.pklfile = "D:/Autotest/Logs/"+cpeipinfo[3]+".process.pkl"
 		test = FtpPerformance()
-		ret = test.ftp_service(cpeipinfo[3],svctype,params)
+		pids = test.ftp_service(cpeipinfo[3],svctype,params)
 		del test
 		ret = self.check_throughput(int(params[1]))
-		self.stop_ftp_service()
-		if not ret[0]:
+		self.stop_ftp_service(pids)
+		if not ret[0] and not isinstance(ret[1], list):
 			return ret
 		tput = self.get_statistics(ret[1])
 		print "\nThroughout Info:",tput,"\n"
-		return [True, tput]
+		return [ret[0], tput]
 
-	def _unpickle_processes(self, pklfile="D:/Autotest/Logs/.process.pkl"):
-		filefd = open(pklfile, 'rb')
-		data = pickle.load(filefd)
-		filefd.close()
-		return data
-
-	def stop_ftp_service(self, prc_name='curl.exe',pklfile="D:/Autotest/Logs/.process.pkl"):
+	def stop_ftp_service(self, pids, prc_name='curl.exe'):
 		''' Stop background FTP '''
-		pids = self._unpickle_processes(pklfile)
+		#pids = self._unpickle_processes()
 		for onepid in pids:
-			os.system('taskkill /f /pid %s 1>null 2>&1' % onepid)
-		os.system('taskkill /f /im 1>null 2>&1' + prc_name)
+			os.system('taskkill /f /pid %s 1>NUL 2>&1' % onepid) 
+		os.system('taskkill /f /im %s 1>NUL 2>&1' % prc_name) 
 
-	def check_throughput(self, svctime,tputfile="D:/Autotest/Logs/hoonetmeter.txt", interval=10):
+	def check_throughput(self, svctime, interval=10):
 		result = []
 		zerocount = 0
 		lastline = ''
@@ -337,16 +334,18 @@ class CpeControl:
 				result.append([newline,0,0])
 				continue
 			result.append([record[0][0],float(record[0][1])/(interval*1024),float(record[0][2])/(interval*1024)])
-			if float(record[0][1])/interval < 10*1024: #DL<10kbps
+			if float(record[0][1])/interval < 50*1024: #DL<50kbps
 				zerocount += 1
 				if zerocount >= 5:
+					print 'Throughput too low'
 					return [False,result]
+			else:
+				zerocount = 0
 			if not lastline:
 				lastline = newline
 				continue
 			if lastline == newline:
 				continue
-			zerocount = 0
 			lastline = newline
 		return [True,result]
 
@@ -365,13 +364,13 @@ class CpeControl:
 			if rec[2] > ulmax: ulmax = rec[2]
 			if rec[2] < ulmin: ulmin = rec[2]
 			ulsum += rec[2]
-		return [[round(dlsum/len(datalist)/1024,2),round(dlmax/1024,2),round(dlmin/1024,2)],
+		return [[round(dlsum/len(datalist)/1024,2),round(dlmax/1024,2),round(dlmin/1024,2)],\
 				[round(ulsum/len(datalist)/1024,2),round(ulmax/1024,2),round(ulmin/1024,2)]]
 
-	def get_lastline(self, tputfile="D:/Autotest/Logs/hoonetmeter.txt"):
+	def get_lastline(self):
 		last_line = ''
 		try:
-			with open(tputfile, 'r') as f:
+			with open(hoolog, 'r') as f:
 				off = -50
 				while True:
 					#seek(off, 2)表示文件指针：从文件末尾(2)开始向前50个字符(-50)
@@ -380,35 +379,12 @@ class CpeControl:
 					if len(lines)>=2: #判断是否最后至少有两行，这样保证了最后一行是完整的
 						last_line = lines[-1] 
 						break
-					#如果off为50时得到的readlines只有一行内容，
-					#那么不能保证最后一行是完整的
+					#如果off为50时得到的readlines只有一行，不能保证最后一行是完整的
 					#所以off翻倍重新运行，直到readlines不止一行
 					off *= 2
 		except Exception, e:
 			print e
 		return last_line
-
-	'''
-	def send_cmd(self, command):
-		try:
-			stdin,stdout,stderr=client.exec_command("%s" % command)
-			message=stdout.read()+stderr.read()
-			return message.strip()
-		except Exception, e:
-			print e
-			return ''
-
-	def timeinfo(self):
-		return time.strftime("%m-%d %H:%M:%S", time.localtime()) 
-
-	def ipcheck(self, ipaddr):
-		result = re.findall(r'(\d+)\.(\d+)\.(\d+)\.(\d+)', ipaddr)
-		if not result: return False
-		for field in result[0]:
-			if(int(field)>=256):
-				return False
-		return True
-	'''
 
 class FtpPerformance:
 	def _upload_curl(self, remotefile, localfile, serverip, ftpuser, ftppd):
@@ -428,7 +404,7 @@ class FtpPerformance:
 			curlprc.stderr.readline()
 
 	def ftp_service(self,cpeid,svctype,params):
-		if len(params) <12: return 
+		if len(params) <12: return []
 		serverip = params[0]
 		#svctime  = params[1]
 		ftpuser  = params[2]
@@ -441,7 +417,9 @@ class FtpPerformance:
 		ulpath_s = params[9]
 		ulpath_c = params[10]
 		ulprefix = params[11]
-		if int(dlthread)>10 or int(ulthread)>10: return
+		if dlpath_c and dlpath_c[-1]=='/': dlpath_c=dlpath_c[:-1]
+		if ulpath_c and ulpath_c[-1]=='/': ulpath_c=ulpath_c[:-1]
+		if int(dlthread)>10 or int(ulthread)>10: return []
 		if os.path.exists("D:/Autotest/Logs/.result.pkl"):
 			os.remove("D:/Autotest/Logs/.result.pkl")
 		pids = []
@@ -449,7 +427,7 @@ class FtpPerformance:
 			for i in range(int(dlthread)):
 				filename  = dlprefix + "%s" %i
 				remotefile = filename if dlpath_s=='' else dlpath_s+'/'+filename
-				localfile  = cpeid+'_'+filename if dlpath_c=='' else dlpath_c+'/'+cpeid+'_'+filename
+				localfile  = dlpath_c+'/'+cpeid+'_'+filename
 				ftptest = multiprocessing.Process(args=(remotefile, localfile, serverip, ftpuser, ftppd,),target=self._download_curl)
 				ftptest.start()
 				time.sleep(2)
@@ -458,7 +436,7 @@ class FtpPerformance:
 			for i in range(int(ulthread)):
 				filename  = ulprefix + "%s" %i
 				remotefile = cpeid+'_'+filename if ulpath_s=='' else ulpath_s+'/'+cpeid+'_'+filename
-				localfile  = filename if ulpath_c=='' else ulpath_c+'/'+filename
+				localfile  = ulpath_c+'/'+filename
 				ftptest = multiprocessing.Process(args=(remotefile, localfile, serverip, ftpuser, ftppd,),target=self._upload_curl)
 				ftptest.start()
 				time.sleep(2)
@@ -467,7 +445,7 @@ class FtpPerformance:
 			for i in range(int(dlthread)):
 				filename  = dlprefix + "%s" %i
 				remotefile = filename if dlpath_s=='' else dlpath_s+'/'+filename
-				localfile  = cpeid+'_'+filename if dlpath_c=='' else dlpath_c+'/'+cpeid+'_'+filename
+				localfile  = dlpath_c+'/'+cpeid+'_'+filename
 				ftptest = multiprocessing.Process(args=(remotefile, localfile, serverip, ftpuser, ftppd,),target=self._download_curl)
 				ftptest.start()
 				time.sleep(2)
@@ -475,18 +453,15 @@ class FtpPerformance:
 			for i in range(int(ulthread)):
 				filename  = ulprefix + "%s" %i
 				remotefile = cpeid+'_'+filename if ulpath_s=='' else ulpath_s+'/'+cpeid+'_'+filename
-				localfile  = filename if ulpath_c=='' else ulpath_c+'/'+filename
+				localfile  = ulpath_c+'/'+filename
 				ftptest = multiprocessing.Process(args=(remotefile, localfile, serverip, ftpuser, ftppd,),target=self._upload_curl)
 				ftptest.start()
 				time.sleep(2)
 				pids.append(ftptest.pid)
-		self._pickle_processes(pids)
-
-	def _pickle_processes(self, data, pklfile="D:/Autotest/Logs/.process.pkl"):
-		#To store the background ftp process pid in pickle file
-		filefd = open(pklfile, 'wb')
-		pickle.dump(data, filefd)
-		filefd.close()
+		return pids
 
 if __name__ == "__main__":
+	multiprocessing.freeze_support()
+	if len(sys.argv)>=2: hoolog = sys.argv[1]
+	print 'HooNetMeter Log:',hoolog
 	CpePCMain().run()
